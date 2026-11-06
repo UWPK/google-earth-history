@@ -9,19 +9,19 @@ Use Mbucari/GEHistoricalImagery to query dated coverage and download tiles into 
 
 ## Setup
 
-Install PowerShell 7 and obtain GEHistoricalImagery from upstream releases. Supply the executable path, writable output directory, and optional proxy explicitly.
+Use Windows, macOS or Linux with a compatible GEHistoricalImagery runtime and GDAL installation. Read [references/platforms.md](references/platforms.md) when installing or changing platforms. Native CLI use needs no PowerShell; the optional helper requires PowerShell 7 on any supported desktop OS. Supply paths and optional proxy explicitly.
 
 ## Workflow
 
 1. Confirm or infer area, requested dates, level, and output directory. State assumed location. Distinguish a radius circle from a square extending the radius in four directions.
-2. Reuse the verified executable when available. Otherwise query GitHub latest release, download Windows x64 ZIP with PowerShell, and expand under the user's workspace tools directory. Do not overwrite an existing installation silently.
-3. Set GDAL_DATA and PROJ_LIB to the executable directory; set GEHistoricalImagery_Cache to a writable cache. Invoke the executable directly from PowerShell, avoiding its batch wrapper.
+2. Reuse the verified executable when available. Otherwise query GitHub latest release, select a release matching the host OS and CPU architecture, and extract under a user-writable tools directory; if no compatible asset exists, follow upstream build instructions and verify native GDAL dependencies before proceeding. Do not overwrite an existing installation silently.
+3. Preserve the installed GDAL/PROJ environment. Set GDAL_DATA and PROJ_DATA only to actual data directories when runtime discovery requires them; use PROJ_LIB only for legacy installations. Set GEHistoricalImagery_Cache to a writable cache. Invoke the native executable from the available shell without Windows batch wrappers.
 4. Run `availability` at the requested level, write GeoJSON, inspect feature properties `image_date`, `zoom_level`, `provider`, `iscomplete`. An index record is only availability evidence.
 5. Pick an available date according to user intent. Use `--exact-date` for dated comparisons. Default nearest-date matching can substitute dates; document any deliberate substitution. Missing tiles may also use lower levels; inspect logs and coverage before claiming full-resolution completion.
 6. Run `download`, preserve logs, require all expected tiles and successful save. For lossless storage of decoded RGB use BOTH `--co=COMPRESS=LZW --co=PHOTOMETRIC=RGB`. Setting only LZW fails with the default YCbCr setting. This does not reverse source JPEG loss.
 7. Check actual TIFF exists and decodes, record dimensions and georeferencing; create a preview if practical. Report index counts separately from downloaded images, requested zoom separately from native source resolution. Retain a failed artifact marked incomplete if one was created.
 
-Use `scripts/Invoke-EarthHistory.ps1` for repeatable queries and downloads. It requires an existing executable, explicit bounding coordinates, and a unique output directory; Query only queries, Download requires a date. For polygons use upstream `--region-file` KML/KMZ; the helper implements rectangles only.
+Optionally use the cross-platform PowerShell 7 helper `scripts/Invoke-EarthHistory.ps1` for repeatable queries and downloads. It requires an existing executable, explicit bounding coordinates, and a unique output directory; Query only queries, Download requires a date. For polygons use upstream `--region-file` KML/KMZ; the helper implements rectangles only.
 
 ## Mechanism and limits
 
@@ -32,3 +32,5 @@ Upstream references:
 - https://github.com/Mbucari/GEHistoricalImagery/blob/master/docs/availability.md
 - https://github.com/Mbucari/GEHistoricalImagery/blob/master/docs/download.md
 
+
+The helper accepts executable paths or commands on PATH, preserves proxy and GDAL settings, checks native exit codes, and uses gdalinfo JSON for raster structure validation. Download mode requires gdalinfo. Metadata validation does not establish complete pixel coverage.
