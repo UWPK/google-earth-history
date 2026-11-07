@@ -30,3 +30,20 @@ pwsh -NoProfile -File scripts/Invoke-EarthHistory.ps1 -Executable GEHistoricalIm
 ```
 
 Use `-Executable` with the actual executable or PATH command, `-GdalInfo` for a custom gdalinfo location, and `-Proxy` only to override inherited settings. Rectangles crossing the antimeridian must be split. Helper validation opens raster metadata; verify pixels, tile completeness and masks separately.
+
+## Automated setup and verification
+
+Run `python scripts/setup.py` from a full checkout (macOS: `python3`; Windows:
+`py -3` when needed). Requires Python 3.10+, internet access, and permission to
+write the selected environment. It creates an isolated environment, obtains a
+current Mozilla CA bundle over system-validated HTTPS when curl is available,
+installs binary Python wheels, and verifies real GeoTIFF write/read behavior.
+No system Python or system CA configuration is changed. Explicit trusted CA:
+`--ca-bundle PATH`. Dry run: `--plan`.
+
+Read local-runtime.json for actual paths after setup. Never commit or migrate
+that file or the virtual environment. Use a normal local terminal for native
+installation; restricted agent environments may prevent macOS DMG mounting.
+No command disables Gatekeeper, TLS verification, or operating-system security.
+The Windows/macOS CI matrix checks native installation and repeat setup;
+online imagery coverage and service access still require a bounded live test.
