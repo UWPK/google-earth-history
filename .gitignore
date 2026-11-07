@@ -5,3 +5,8 @@
 *.tiff
 cache/
 outputs/
+.venv/
+.runtime/
+local-runtime.json
+__pycache__/
+*.pyc

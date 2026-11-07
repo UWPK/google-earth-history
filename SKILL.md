@@ -34,3 +34,12 @@ Upstream references:
 
 
 The helper accepts executable paths or commands on PATH, preserves proxy and GDAL settings, checks native exit codes, and uses gdalinfo JSON for raster structure validation. Download mode requires gdalinfo. Metadata validation does not establish complete pixel coverage.
+
+## Automated Windows/macOS setup
+
+For a fresh installation run `python scripts/setup.py` (macOS often `python3`,
+Windows optionally `py -3`). Read generated `local-runtime.json` for the verified
+Python and native client paths. Keep `.venv`, `.runtime` and local-runtime.json
+local to this machine. Do not copy paths or credentials from another computer.
+The setup verifies real GeoTIFF IO and the optional native client's help; follow
+with a bounded online availability/download check before claiming data access.
