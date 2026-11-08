@@ -1,48 +1,98 @@
-# google-earth-history
+# Google Earth 历史影像工作流技能
 
-适用于 Windows、macOS 和 Linux 的遥感影像代理技能。
+先查询目标区域有哪些历史影像日期，再按指定日期下载并整理为有地理参考的 GeoTIFF。这个 agent skill 将 [GEHistoricalImagery](https://github.com/Mbucari/GEHistoricalImagery) 命令行工具融入 Codex、Pi 等支持技能的助手工作流，帮助用户从影像可用性检查走到可核验的下载结果。
 
-基于 GEHistoricalImagery 查询与下载历史影像。可以直接在原生 shell 调用上游 CLI，也提供适用于三平台的 PowerShell 7 辅助脚本，使用 gdalinfo 验证空间元数据。需要兼容当前操作系统与 CPU 的上游客户端和 GDAL。
+它适合需要快速检查历史影像日期、下载一处或多处区域影像、制作多期对照底图，或将结果交给 Python GIS 流程继续处理的遥感与地理信息任务。技能提供任务判断、命令调用和结果核验步骤；实际影像查询及下载由上游客户端和影像服务完成。
 
-## 安装
+## 什么时候选 Google Earth 历史影像
 
-将仓库内容放入代理支持的技能目录，如 ~/.codex/skills/google-earth-history，保留完整目录结构，再开启新会话。已有同名技能时可使用独立配置环境，避免覆盖。
+当你需要先回答“这个位置有哪些日期可选”，再选择某个日期下载时，这个工作流很合适。影像覆盖和日期取决于具体位置、地图级别及上游索引；输入一个日期不代表每个瓦片都有该日数据。默认日期匹配还可能选择邻近日期，因此需要严格多期对比时，应使用精确日期选项并检查下载日志、瓦片完整性与影像分辨率。
 
-## 使用
+常见任务包括：
 
-在对话中指定技能名、区域、日期、输出目录和分辨率。代理先检查运行环境和服务可用性。
+- 查询研究区在指定地图级别下的历史影像日期与覆盖情况。
+- 下载指定日期的影像并拼接为带空间参考的 GeoTIFF。
+- 对多个日期分别下载，检查缺失瓦片后进行变化对比。
+- 将区域影像输出到 Python GIS 或遥感分析流程中，并保留日期与来源记录。
 
-[技能入口](SKILL.md) · [跨平台配置与示例](references/platforms.md)
+如果任务重点是按 Esri World Imagery Wayback 发布版本筛选底图，或需要估算 Wayback 元数据中的拍摄年份覆盖，可同时查看 [`esri-wayback-download`](https://github.com/UWPK/esri-wayback-download)。两者数据来源和日期含义不同；组合使用时请分别记录来源、日期及补洞情况。
 
-## 验证范围
+## 工作流程
 
-当前维护环境为 Windows。跨平台说明避免固定盘符、Windows 图像组件及固定代理；macOS/Linux 的完整在线影像下载尚需各平台实机验收。
+1. 确认区域范围、日期需求、地图级别、输出目录和是否需要严格匹配日期。
+2. 检查本机对应操作系统和 CPU 架构的 GEHistoricalImagery 客户端及 GDAL 运行环境；安装器可为支持的平台获取匹配的上游客户端。
+3. 运行 `availability` 查询，保存 GeoJSON 并检查日期、级别、来源与完整性字段。索引记录表示有可用性线索，不代表下载已成功。
+4. 根据查询结果选择日期。需要严格对比时使用 `--exact-date`；若接受邻近日期替代，应在结果说明中标明。检查日志中是否有缺瓦片或较低级别替代。
+5. 运行 `download` 下载并拼接 GeoTIFF，保留命令输出和日志。解码后的 RGB 无损压缩需同时指定 `COMPRESS=LZW` 和 `PHOTOMETRIC=RGB`；这不会消除上游 JPEG 图像已有的压缩损失。
+6. 检查输出文件是否存在、可读取、空间参考和仿射变换是否合理，并核对预期瓦片数、缺块和预览图。
+7. 汇报查询日期数量、实际下载结果、使用日期、级别、坐标范围、空间信息检查和未覆盖部分。
 
-## 数据与署名
+## 使用方式
 
-影像服务和第三方依赖遵循各自使用条款，保留提供方署名与来源。记录日期含义、覆盖率、缺失情况和验证范围。仓库不附带影像、凭据或第三方可执行程序。
+在支持 agent skills 的助手中安装本仓库的技能目录，开启新会话后说明区域、想检查或下载的日期、输出位置和精度要求。例如：
 
-辅助脚本的离线行为测试：pwsh -NoProfile -File tests/Test-Helper.ps1。测试使用模拟客户端和模拟 GDAL，覆盖流程控制；真实影像和 GDAL 读取需另行验收。
+> 查询这个区域在 2018 到 2022 年间可用的 Google Earth 历史影像日期，输出日期清单。对比前先确认每个日期的瓦片覆盖；下载 2020 年 6 月 15 日的精确日期版本，保留日志并检查 GeoTIFF 的 CRS、范围和缺块。
 
-## Windows / macOS 自动准备
+先查询可用日期，再下载小范围样本，是确认服务访问与结果质量的推荐起点。技能入口见 [`SKILL.md`](SKILL.md)，平台与命令参数示例见[跨平台配置](references/platforms.md)。原生 CLI 不需要 PowerShell；仓库也保留可选的 PowerShell 7 辅助脚本。
 
-先安装 Python 3.10+，下载或克隆完整仓库。在仓库目录执行：
+## 安装运行环境
 
-```text
-python scripts/setup.py
+完整克隆或下载仓库后，准备 Python 3.10+，在仓库目录执行：
+
+```bash
+# macOS / Linux
+python3 scripts/setup.py
+
+# Windows（也可使用 python scripts/setup.py）
+py -3 scripts/setup.py
 ```
 
-macOS 通常使用 `python3 scripts/setup.py`；Windows 可使用 `py -3 scripts/setup.py`。
-脚本创建仓库内 `.venv`、安装运行依赖并真实读写小型 GeoTIFF，写出本机 `local-runtime.json`。
-这些本机文件不应提交或复制到其他电脑。重复运行复用已有环境。
-未指定证书时，使用系统 curl 经 HTTPS 获取 Mozilla CA 包供 pip 使用；不会修改系统证书。
-可用 `--plan` 预览，`--env` 指定其他独立环境，`--ca-bundle` 指定可信 CA；不会关闭 TLS 验证。
-Python 缺失、无法联网或证书配置有误时会明确失败，需要先修复相应前置条件。
+安装器创建仓库内的独立 Python 环境，安装 GeoTIFF 检查依赖，并实际执行小型 GeoTIFF 读写测试；它也会为支持的系统和处理器架构下载上游客户端、核对发布包 SHA-256，并检查客户端能否启动。安装结果写入 `local-runtime.json`。`.venv`、`.runtime` 和该本机文件不可提交或复制到别的电脑；在每台电脑上分别运行安装器。
 
-GitHub Actions 会在 Windows x64、macOS Apple Silicon 和 Intel runner 安装真实依赖。
-CI 成功只代表安装及运行检查，不证明所有地区/日期的在线影像可用。
+安装需要网络连接和所选目录的写入权限。安装器保留 TLS 验证，不会关闭 macOS 系统安全功能。Google Earth 下载由第三方客户端访问上游服务完成；Windows ARM64 当前没有对应的原生上游发布包，安装器会明确报告不支持，而不会自动选用其他架构版本。完整安装参数见 `python scripts/setup.py --help`。
 
-Google Earth 安装器还会从上游 v0.7.1 下载匹配架构客户端，核对 Release SHA-256，
-保留 GDAL 动态库/数据布局并执行 `--help`。使用 `--client <已有可执行文件>` 可复用安装；
-无需 PowerShell。Windows ARM64 暂无原生 Release，安装器会明确停止，不自动选择 x64 模拟。
-macOS 如出现系统安全拦截，请按系统正常流程确认官方客户端，不要关闭系统安全功能。
+## 命令行示例
+
+以下示例展示调用格式。请先根据实际区域查询可用日期，并用安装后验证过的客户端路径替换 `GEHistoricalImagery`：
+
+```bash
+GEHistoricalImagery availability \
+  --lower-left=39.89883,116.39156 \
+  --upper-right=39.90783,116.40326 \
+  --zoom=18 --parallel=4 --output=availability.geojson -q
+
+GEHistoricalImagery download \
+  --lower-left=39.89883,116.39156 \
+  --upper-right=39.90783,116.40326 \
+  --zoom=18 --parallel=4 --date=2024/12/07 --exact-date \
+  --co=COMPRESS=LZW --co=PHOTOMETRIC=RGB --output=earth.tif
+
+gdalinfo -json earth.tif
+```
+
+命令中的日期仅用于展示参数格式，不能据此推断该区域存在相应影像。请先检查 availability 输出，并确认已安装版本支持所用参数。对边界多边形可使用上游 CLI 支持的区域文件；可选 PowerShell 辅助脚本当前面向矩形范围。
+
+## 产出与核验
+
+工作流通常生成可用日期 GeoJSON、带空间参考的 GeoTIFF、运行日志和检查摘要。根据任务，还可生成地图预览、多个日期的独立影像以及缺失瓦片记录。索引条目数、成功下载图像数和区域覆盖率是不同指标，应分开报告。
+
+元数据可读取只是必要检查的一部分。对完整交付还应检查像元是否可读、坐标系与范围、请求的地图级别、每日期瓦片完整性、邻近日期替代和低级别回退。技能不能仅凭 HTTP 成功状态或 GeoTIFF 文件存在就认定影像完整。
+
+## 数据使用与边界
+
+本项目依赖第三方客户端及其访问的上游历史影像服务，不代表 Google 官方 API，也不承诺服务接口、覆盖范围、历史日期或下载配额稳定。Google Pro 会员不是上游工具文档所列的必要条件，但实际访问仍受服务状态、网络、区域覆盖及适用条款约束。请勿将索引日期等同于全区完整影像日期，也勿将地图级别直接等同于原始传感器分辨率。
+
+影像通常是已解码的 RGB 底图，不应描述为原始传感器数据或辐射定标产品。公开展示、再分发和研究使用前，请核对影像提供方与上游服务的最新条款，并保留要求的来源署名。第三方客户端遵循其自己的许可。
+
+**许可状态：**当前仓库尚未包含 `LICENSE` 文件。发布为开源项目之前，请维护者选择并添加明确的开源许可证；在此之前，不能仅凭公开可见就推断代码和文档可被自由复制、修改或再发布。项目许可证也不会扩展到影像数据、上游服务或第三方客户端。
+
+## 平台与验证
+
+自动安装与运行检查已覆盖 Windows x64、macOS Apple Silicon 和 Intel Mac。维护环境完成过一次小范围在线查询、精确日期单瓦片下载及 GeoTIFF 读取验证；这不是对所有地区、日期、网络环境或大范围下载的保证。Linux 可按照上游客户端与 GDAL 的系统/架构兼容性要求配置，需自行确认运行依赖。Windows ARM64 当前缺少上游原生发布包。
+
+## 相关链接
+
+- [技能入口与任务规则](SKILL.md)
+- [跨平台安装与命令示例](references/platforms.md)
+- [上游 GEHistoricalImagery 项目](https://github.com/Mbucari/GEHistoricalImagery)
+- [Google Earth 历史影像技能的 Esri Wayback 伙伴项目](https://github.com/UWPK/esri-wayback-download)
